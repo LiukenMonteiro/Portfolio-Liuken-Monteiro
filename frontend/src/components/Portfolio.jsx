@@ -141,17 +141,17 @@ const Portfolio = () => {
         setTimeout(() => {
           setTypedText('');
           setCurrentWordIndex((prev) => (prev + 1) % words.length);
-        }, 2000);
+        }, 800);
       }
     };
 
-    const timer = setTimeout(typeWriter, 100);
+    const timer = setTimeout(typeWriter, 10);
     return () => clearTimeout(timer);
   }, [typedText, currentWordIndex, words]);
 
   // Loading animation
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
+    const timer = setTimeout(() => setIsLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -170,62 +170,81 @@ const Portfolio = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Particles animation
-  useEffect(() => {
-    const createParticles = () => {
-      const newParticles = [];
-      for (let i = 0; i < 50; i++) {
-        newParticles.push({
-          id: i,
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          size: Math.random() * 3 + 1,
-          speedX: (Math.random() - 0.5) * 0.5,
-          speedY: (Math.random() - 0.5) * 0.5,
-          opacity: Math.random() * 0.5 + 0.2
-        });
+  // Particles animation - VERSÃO MELHORADA
+useEffect(() => {
+  const createParticles = () => {
+    const newParticles = [];
+    for (let i = 0; i < 30; i++) { // Menos partículas, mais qualidade
+      newParticles.push({
+        id: i,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        size: Math.random() * 4 + 2, // Partículas maiores
+        speedX: (Math.random() - 0.5) * 1, // Movimento mais rápido
+        speedY: (Math.random() - 0.5) * 1,
+        opacity: Math.random() * 0.6 + 0.2, // Mais visíveis
+        pulsePhase: Math.random() * Math.PI * 2, // Para animação de pulsação
+        floatAmplitude: Math.random() * 20 + 10 // Amplitude do movimento flutuante
+      });
+    }
+    setParticles(newParticles);
+  };
+
+  createParticles();
+  
+  const animateParticles = () => {
+    setParticles(prev => prev.map(particle => {
+      // Movimento com física mais suave
+      let newX = particle.x + particle.speedX;
+      let newY = particle.y + particle.speedY + Math.sin(Date.now() * 0.001 + particle.pulsePhase) * 0.5;
+      
+      // Efeito de bounce nas bordas
+      if (newX > window.innerWidth || newX < 0) {
+        particle.speedX *= -0.8; // Diminui velocidade no bounce
+        newX = Math.max(0, Math.min(window.innerWidth, newX));
       }
-      setParticles(newParticles);
-    };
-
-    createParticles();
-    
-    const animateParticles = () => {
-      setParticles(prev => prev.map(particle => ({
+      if (newY > window.innerHeight || newY < 0) {
+        particle.speedY *= -0.8;
+        newY = Math.max(0, Math.min(window.innerHeight, newY));
+      }
+      
+      return {
         ...particle,
-        x: particle.x + particle.speedX,
-        y: particle.y + particle.speedY,
-        x: particle.x > window.innerWidth ? 0 : particle.x < 0 ? window.innerWidth : particle.x,
-        y: particle.y > window.innerHeight ? 0 : particle.y < 0 ? window.innerHeight : particle.y
-      })));
-    };
+        x: newX,
+        y: newY,
+        // Pulsação sutil da opacidade
+        opacity: particle.opacity + Math.sin(Date.now() * 0.002 + particle.id) * 0.1
+      };
+    }));
+  };
 
-    const interval = setInterval(animateParticles, 50);
-    return () => clearInterval(interval);
-  }, []);
+  const interval = setInterval(animateParticles, 16); // 60fps
+  
+  // Recriar partículas quando redimensionar
+  const handleResize = () => createParticles();
+  window.addEventListener('resize', handleResize);
+  
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('resize', handleResize);
+  };
+}, []);
 
   // Scroll handling
-  useEffect(() => {
-    const handleScroll = () => {
-      const sections = ['home', 'about', 'technologies', 'projects', 'contact'];
-      const scrollPosition = window.scrollY + 100;
+ useEffect(() => {
+  const handleScroll = () => {
+    const scrolled = window.pageYOffset;
+    const parallaxElements = document.querySelectorAll('.parallax-bg');
+    
+    parallaxElements.forEach(el => {
+      const speed = 0.5;
+      el.style.transform = `translateY(${scrolled * speed}px)`;
+    });
+  };
 
-      sections.forEach(section => {
-        const element = document.getElementById(section);
-        if (element) {
-          const offsetTop = element.offsetTop;
-          const offsetHeight = element.offsetHeight;
-          
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveSection(section);
-          }
-        }
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  window.addEventListener('scroll', handleScroll);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
 const scrollToSection = (sectionId) => {
   console.log('🎯 Clicou no botão:', sectionId);
@@ -280,21 +299,31 @@ const scrollToSection = (sectionId) => {
         style={{ transform: 'translate(-50%, -50%)' }}
       />
 
-      {/* Particles Background */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        {particles.map(particle => (
-          <div
-            key={particle.id}
-            className={`absolute w-1 h-1 bg-gradient-to-r ${currentTheme.primary} rounded-full`}
-            style={{
-              left: particle.x,
-              top: particle.y,
-              opacity: particle.opacity,
-              transform: `scale(${particle.size})`
-            }}
-          />
-        ))}
-      </div>
+    {/* Particles Background - VERSÃO TURBINADA */}
+    {/* <div className="fixed inset-0 pointer-events-none z-0 parallax-bg"></div> */}
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {particles.map(particle => (
+        <div
+          key={particle.id}
+          className={`absolute rounded-full bg-gradient-to-r ${currentTheme.primary} animate-pulse`}
+          style={{
+            left: particle.x + 'px',
+            top: particle.y + 'px',
+            width: particle.size * 2 + 'px',
+            height: particle.size * 2 + 'px',
+            opacity: particle.opacity,
+            transform: `scale(${Math.sin(Date.now() * 0.001 + particle.id) * 0.5 + 1})`,
+            filter: `blur(${particle.size * 0.5}px)`,
+            boxShadow: `0 0 ${particle.size * 4}px ${particle.size * 2}px rgba(59, 130, 246, 0.3)`,
+            animationDelay: `${particle.id * 0.1}s`,
+            animationDuration: `${2 + particle.id * 0.1}s`
+          }}
+        />
+      ))}
+      
+      {/* Gradiente sutil para profundidade */}
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-900/5 to-purple-900/10 pointer-events-none"></div>
+    </div>
 
       {/* Settings Panel */}
       <div className={`fixed top-12 right-4 z-50 transition-all duration-300 ${isSettingsOpen ? 'translate-x-0' : 'translate-x-72'}`}>
@@ -419,17 +448,27 @@ const scrollToSection = (sectionId) => {
       {/* Hero Section */}
       <section id="home" className="min-h-screen flex items-center justify-center px-4 pt-16 relative">
         <div className="text-center max-w-6xl mx-auto relative z-10">
-          <div className="mb-8 relative">
-            <div className={`w-40 h-40 mx-auto mb-8 bg-gradient-to-br ${currentTheme.primary} rounded-full flex items-center justify-center text-4xl font-bold shadow-2xl animate-bounce relative overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20 rounded-full"></div>
-             <img 
-                  src="/profile.jpg"
-                  alt="Liuken Monteiro" 
-                  className="w-full h-full object-cover rounded-full transition-transform duration-300 group-hover:scale-110"
-                />
-              <div className={`absolute inset-0 bg-gradient-to-r ${currentTheme.primary} opacity-10 animate-pulse rounded-full`}></div>
-            </div>
-          </div>
+          <div className="w-40 h-40 mx-auto mb-8 relative group cursor-pointer">
+  <div className={`w-full h-full bg-gradient-to-br ${currentTheme.primary} rounded-full shadow-2xl transition-all duration-300 group-hover:shadow-3xl hover:animate-shake relative overflow-hidden p-1`}>
+    
+    <img 
+      src="/profile.jpg"
+      alt="Liuken Monteiro" 
+      className="w-full h-full object-cover rounded-full transition-all duration-300 group-hover:scale-105"
+    />
+    
+    {/* Múltiplos anéis de efeito */}
+    <div className={`absolute -inset-1 bg-gradient-to-r ${currentTheme.primary} rounded-full opacity-0 transition-all duration-300 group-hover:opacity-40 group-hover:animate-pulse`}></div>
+    <div className={`absolute -inset-3 bg-gradient-to-r ${currentTheme.primary} rounded-full opacity-0 transition-all duration-500 group-hover:opacity-20 group-hover:animate-ping`}></div>
+    
+    {/* Partículas de efeito */}
+    <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+      <div className="absolute top-2 right-2 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+      <div className="absolute bottom-3 left-3 w-1 h-1 bg-blue-400 rounded-full animate-bounce"></div>
+      <div className="absolute top-1/2 left-1 w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping"></div>
+    </div>
+  </div>
+</div>
           
           <h1 className="text-6xl md:text-8xl font-bold mb-6 relative">
             <span className={`bg-gradient-to-r ${currentTheme.primary} bg-clip-text text-transparent animate-gradient`}>
